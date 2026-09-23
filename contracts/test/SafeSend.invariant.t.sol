@@ -72,9 +72,21 @@ contract Handler is Test {
     function claim(uint256 idx) external {
         if (ids.length == 0) return;
         uint256 id = ids[idx % ids.length];
-        (address t,, address to, uint128 amount, uint64 unlockAt, SafeSend.Status status,) = router.transfers(id);
+        (
+            address t,
+            address from,
+            address to,
+            uint128 amount,
+            uint64 unlockAt,
+            SafeSend.Status status,
+            SafeSend.Reason reason
+        ) = router.transfers(id);
         if (status != SafeSend.Status.Pending) return;
         if (block.timestamp < unlockAt) vm.warp(unlockAt);
+        if (reason == SafeSend.Reason.LookalikeOfVerified && !router.lookalikeApproved(id)) {
+            vm.prank(from);
+            router.approveLookalike(id);
+        }
         vm.prank(to);
         router.claim(id);
         if (t == address(0)) ghostEthPending -= amount;

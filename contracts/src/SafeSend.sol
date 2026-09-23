@@ -13,7 +13,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /// recipient — claiming verifies the payee for future sends. An address whose
 /// first and last 4 hex characters match a verified payee ("lookalike", the
 /// heuristic address-poisoning attacks exploit) is escrowed for a fixed 24h
-/// window and flagged on-chain.
+/// window and flagged on-chain; the sender must additionally approve the
+/// flagged recipient before it can claim.
 ///
 /// No owner, no upgradeability, no fees. Custody is by code only.
 contract SafeSend is ReentrancyGuard {
@@ -53,6 +54,11 @@ contract SafeSend is ReentrancyGuard {
 
     mapping(uint256 => Transfer) public transfers;
 
+    /// @notice escrow id => sender approved the flagged lookalike recipient.
+    /// Only meaningful for LookalikeOfVerified escrows; a separate mapping so
+    /// the Transfer tuple stays unchanged.
+    mapping(uint256 => bool) public lookalikeApproved;
+
     /// @dev transfer ids start at 1; send() returns 0 for instant sends
     uint256 public nextId = 1;
 
@@ -73,6 +79,7 @@ contract SafeSend is ReentrancyGuard {
         uint8 reason
     );
     event LookalikeFlagged(uint256 indexed id, address indexed from, address indexed to, uint32 fingerprint);
+    event LookalikeApproved(uint256 indexed id);
     event Claimed(uint256 indexed id);
     event Cancelled(uint256 indexed id);
     event Reclaimed(uint256 indexed id);
@@ -82,6 +89,8 @@ contract SafeSend is ReentrancyGuard {
 
     error NotRecipient();
     error NotSender();
+    error NotApproved();
+    error NotLookalike();
     error Locked();
     error NotPending();
     error TooEarly();
@@ -141,12 +150,25 @@ contract SafeSend is ReentrancyGuard {
         emit Escrowed(id, msg.sender, to, token, amount, t.unlockAt, uint8(t.reason));
     }
 
+    /// @notice Sender approves the recipient of a lookalike-quarantined escrow.
+    /// Approval is required in addition to the 24h lock before claim() succeeds
+    /// — without it the flagged lookalike could claim and auto-verify itself.
+    function approveLookalike(uint256 id) external {
+        Transfer storage t = transfers[id];
+        if (msg.sender != t.from) revert NotSender();
+        if (t.status != Status.Pending) revert NotPending();
+        if (t.reason != Reason.LookalikeOfVerified) revert NotLookalike();
+        lookalikeApproved[id] = true;
+        emit LookalikeApproved(id);
+    }
+
     /// @notice Recipient claims escrowed funds after unlock; becomes a verified payee for the sender
     function claim(uint256 id) external nonReentrant {
         Transfer storage t = transfers[id];
         if (msg.sender != t.to) revert NotRecipient();
         if (t.status != Status.Pending) revert NotPending();
         if (block.timestamp < t.unlockAt) revert Locked();
+        if (t.reason == Reason.LookalikeOfVerified && !lookalikeApproved[id]) revert NotApproved();
 
         t.status = Status.Claimed;
         _verify(t.from, t.to);

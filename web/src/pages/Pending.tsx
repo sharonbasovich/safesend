@@ -39,16 +39,41 @@ function Card({ t, flagged }: { t: TransferRow; flagged: boolean }) {
   const isEth = t.token === zeroAddress;
   const counterparty: Address = iAmSender ? t.to : t.from;
   const [busy, setBusy] = useState(false);
+  const { chainId } = useApp();
+  const pc = publicClientFor(chainId);
 
-  async function act(fn: "claim" | "cancel" | "reclaim") {
+  const { data: approved } = useQuery({
+    queryKey: ["lookalikeApproved", chainId, t.id.toString()],
+    enabled: Boolean(deployment && flagged && pending),
+    refetchInterval: 4000,
+    queryFn: () =>
+      pc.readContract({
+        address: deployment!.safeSend,
+        abi: safeSendAbi,
+        functionName: "lookalikeApproved",
+        args: [t.id],
+      }),
+  });
+  const claimable = unlocked && (!flagged || approved === true);
+
+  async function act(fn: "claim" | "cancel" | "reclaim" | "approveLookalike") {
     if (!deployment) return;
     setBusy(true);
-    await sendTx(fn === "claim" ? "Claim" : fn === "cancel" ? "Cancel & refund" : "Reclaim", {
-      to: deployment.safeSend,
-      abi: safeSendAbi,
-      functionName: fn,
-      args: [t.id],
-    });
+    await sendTx(
+      fn === "claim"
+        ? "Claim"
+        : fn === "cancel"
+          ? "Cancel & refund"
+          : fn === "approveLookalike"
+            ? "Approve flagged recipient"
+            : "Reclaim",
+      {
+        to: deployment.safeSend,
+        abi: safeSendAbi,
+        functionName: fn,
+        args: [t.id],
+      }
+    );
     setBusy(false);
   }
 
@@ -97,13 +122,26 @@ function Card({ t, flagged }: { t: TransferRow; flagged: boolean }) {
               Cancel & refund
             </button>
           )}
+          {iAmSender && flagged && !approved && (
+            <button
+              disabled={busy}
+              onClick={() => act("approveLookalike")}
+              className="flex-1 rounded-lg bg-amber-700 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-40"
+            >
+              Approve this flagged recipient
+            </button>
+          )}
           {iAmRecipient && (
             <button
-              disabled={busy || !unlocked}
+              disabled={busy || !claimable}
               onClick={() => act("claim")}
               className="flex-1 rounded-lg bg-emerald-700 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-40"
             >
-              {unlocked ? "Claim (becomes verified payee)" : "Claim — locked"}
+              {claimable
+                ? "Claim (becomes verified payee)"
+                : flagged && !approved
+                  ? "Claim — needs sender approval"
+                  : "Claim — locked"}
             </button>
           )}
           {iAmSender && !unlocked && iAmRecipient === false && null}
@@ -117,6 +155,12 @@ function Card({ t, flagged }: { t: TransferRow; flagged: boolean }) {
             </button>
           )}
         </div>
+      )}
+      {pending && flagged && !approved && (
+        <p className="mt-2 text-xs text-amber-500">
+          Flagged lookalike: the recipient cannot claim until the sender approves on-chain — no
+          auto-approval, and the sender can still cancel even after approving.
+        </p>
       )}
       {pending && iAmRecipient && !unlocked && (
         <p className="mt-2 text-xs text-zinc-500">
