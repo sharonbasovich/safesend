@@ -97,9 +97,11 @@ contract PoisonerTest is Test {
         assertEq(token.balanceOf(victim), 10_000e6);
     }
 
-    /// Even after the 24h lock expires, a lookalike CAN claim — the window and
-    /// the flag are the defense, not a permanent block. State this honestly.
-    function test_lookalike_canClaimAfter24h_ifSenderNeverCancels() public {
+    /// After the 24h lock a lookalike still cannot claim — the sender must
+    /// explicitly approve the flagged recipient. The only way the attack pays
+    /// out is if the victim is fooled into approving; without that, the funds
+    /// sit until the sender cancels or reclaims.
+    function test_lookalike_cannotClaimAfter24h_withoutSenderApproval() public {
         vm.prank(victim);
         router.addPayee(terry);
         address lookalike = _lookalikeOf(terry);
@@ -108,6 +110,15 @@ contract PoisonerTest is Test {
         uint256 id = router.send(address(token), lookalike, 1_000e6);
 
         vm.warp(block.timestamp + 24 hours);
+        vm.prank(lookalike);
+        vm.expectRevert(SafeSend.NotApproved.selector);
+        router.claim(id);
+        assertEq(token.balanceOf(lookalike), 0);
+
+        // but if the sender does approve, the recipient claims on schedule —
+        // approval is the honest "the sender confirmed this is the real payee" step
+        vm.prank(victim);
+        router.approveLookalike(id);
         vm.prank(lookalike);
         router.claim(id);
         assertEq(token.balanceOf(lookalike), 1_000e6);

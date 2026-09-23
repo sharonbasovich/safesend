@@ -59,7 +59,7 @@
     <tr><th>Recipient</th><th>Routing</th></tr>
     <tr><td>Verified payee</td><td class="green">Instant transfer — no escrow</td></tr>
     <tr><td>Unknown payee</td><td class="amber">Sender-cancellable escrow · recipient claims after cooldown</td></tr>
-    <tr><td>Fingerprint collides with a verified payee</td><td class="red">24h quarantine + on-chain LookalikeFlagged event · always cancellable</td></tr>
+    <tr><td>Fingerprint collides with a verified payee</td><td class="red">24h quarantine + LookalikeFlagged · cancellable · claim needs sender's on-chain approval</td></tr>
   </table>
 </div>
 
@@ -68,7 +68,7 @@
   <h2><span class="num">03</span>The contract — a router, not a vault</h2>
   <div class="grid2">
     <div class="card"><b>send(to, token, amount)</b><br>Verified → instant. Lookalike → 24h lock + flag. Unknown → escrow for sender's cooldown (60s–7d).</div>
-    <div class="card"><b>cancel(id)</b> sender only, any time → full refund<br><b>claim(id)</b> recipient only, after unlock → pays out <b>and verifies</b> them</div>
+    <div class="card"><b>cancel(id)</b> sender only, any time → full refund<br><b>claim(id)</b> recipient only, after unlock → pays out <b>and verifies</b> — flagged escrows also need sender's <b>approveLookalike(id)</b></div>
     <div class="card"><b>reclaim(id)</b> after unlock + 30d — dead-letter recovery</div>
     <div class="card"><b>addPayee / removePayee / setCooldown</b> — the sender's own book. No owner. No admin. No fees.</div>
   </div>
@@ -82,7 +82,7 @@
     <li><b>Attacker console</b> (Anvil only): pick a payee → generated lookalike → <b>poison</b> (zero-value transferFrom) + <b>dust</b> (impersonation).</li>
     <li><b>History</b> flags both injected rows — the lookalike now "looks like" the real payee.</li>
     <li>Paste it into <b>Send</b> → <span class="red">LOOKALIKE badge</span> → contract quarantines + emits the flag.</li>
-    <li><b>Pending</b> → cancel → full refund. A raw transfer here is gone forever.</li>
+    <li><b>Pending</b> → cancel → full refund. Even after 24h, the lookalike can't claim — claim also requires the sender's approval.</li>
     <li>Same flow to the real payee → <span class="green">instant</span>. New contact → escrow → they claim → <span class="green">verified forever</span>.</li>
   </ul>
 </div>
@@ -91,7 +91,7 @@
 <div class="slide">
   <h2><span class="num">05</span>Engineering rigor</h2>
   <ul>
-    <li><b>45 Foundry tests</b>: unit, negative (NotRecipient / NotSender / Locked / TooEarly …), event assertions.</li>
+    <li><b>56 Foundry tests</b>: unit, negative (NotRecipient / NotSender / Locked / TooEarly …), event assertions.</li>
     <li><b>Fuzz</b> (512 runs): random amounts, recipients, timings across every transition.</li>
     <li><b>Invariants</b> (128 × depth 32): router solvency for ERC-20 + ETH; nextId monotonic; verified recipients can never sit in escrow.</li>
     <li><b>100% line coverage</b> on SafeSend.sol · <span class="mono">forge fmt</span> clean · gas snapshot.</li>
@@ -113,7 +113,7 @@
 <!-- 8 — close -->
 <div class="slide">
   <h2><span class="num">07</span>The most common way people lose to poisoning is now a refund</h2>
-  <p class="sub">Copy-from-history is a UI habit. SafeSend turns its worst case — a lookalike paste —<br>into a 24-hour escrow the attacker can never claim and the sender can always cancel.</p>
+  <p class="sub">Copy-from-history is a UI habit. SafeSend turns its worst case — a lookalike paste —<br>into a 24-hour escrow the attacker can't claim without the sender's on-chain approval.</p>
   <ul>
     <li>Runs today: <span class="mono">make anvil && make deploy-local && make seed && make web</span></li>
     <li>Base Sepolia deploy path included; attack tooling confined to local Anvil, labeled for education.</li>
