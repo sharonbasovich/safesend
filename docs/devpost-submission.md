@@ -71,13 +71,15 @@ Sepolia:
 
 ## GitHub
 
-`TODO — paste the public repo URL after publishing`
-(local export: `dist/safesend.bundle` / `safesend-source.tar.gz`)
+https://github.com/sharonbasovich/safesend
 
 ## Demo
 
-- Video: `TODO — upload the recorded walkthrough (script: docs/video-script.md, ≤3:00)`
-- Live preview: `TODO — deployed URL if hosted; otherwise run locally`
+- Video: https://github.com/sharonbasovich/safesend/blob/main/docs/safesend-demo-anvil-e2e.mp4
+  (real local-Anvil end-to-end walkthrough; upload to a Devpost-supported video
+  host if required)
+- Web preview: the web UI requires a local Anvil node and is not a live public
+  chain demo; watch the video or run the local demo below.
 - Local demo: `make anvil && make deploy-local && make seed && make web`,
   then open `http://localhost:5173/?demo=1`
 - Screenshots: `docs/screenshots/` (attack → quarantine → refund → verified
