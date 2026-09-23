@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="SafeSend is an unaudited local-Anvil prototype that quarantines address-poisoning lookalikes before payment." />
+    <title>SafeSend — poison-aware payments</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #07121a; color: #f0f8f8; }
+      * { box-sizing: border-box; }
+      body { margin: 0; line-height: 1.55; }
+      a { color: inherit; }
+      .shell { width: min(1120px, calc(100% - 36px)); margin: 0 auto; }
+      header { border-bottom: 1px solid #20383f; background: #0a1b24; }
+      header .shell { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+      .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.13rem; text-decoration: none; }
+      .mark { display: inline-grid; place-items: center; width: 31px; height: 31px; border-radius: 9px; background: #27dab9; color: #072821; font-size: 1.1rem; }
+      nav { display: flex; gap: 18px; color: #b4cbd0; font-size: .92rem; }
+      nav a { text-decoration: none; }
+      nav a:hover, a:hover { color: #57eed2; }
+      .hero { padding: 75px 0 55px; background: radial-gradient(circle at 82% 4%, #0f4b4e 0%, transparent 40%), #07121a; }
+      .eyebrow { display: inline-block; border: 1px solid #286c68; color: #7cf1d8; background: #10302f; border-radius: 999px; padding: 5px 12px; font-size: .74rem; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+      h1 { max-width: 860px; margin: 18px 0; font-size: clamp(2.7rem, 6vw, 5.2rem); line-height: 1.08; letter-spacing: -.055em; }
+      h1 span { color: #53e7cb; }
+      .lead { max-width: 690px; color: #b5cbd0; font-size: clamp(1.05rem, 2vw, 1.25rem); }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+      .button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 17px; border-radius: 9px; font-weight: 700; text-decoration: none; border: 1px solid #527b80; }
+      .button.primary { background: #46e3c4; border-color: #46e3c4; color: #09231e; }
+      .button:hover { filter: brightness(1.1); }
+      .notice { margin-top: 29px; max-width: 780px; border-left: 3px solid #f1bd6b; padding: 11px 15px; background: #182628; color: #e8ddd0; font-size: .92rem; }
+      section { padding: 46px 0; }
+      section + section { border-top: 1px solid #20343a; }
+      h2 { margin: 0 0 12px; font-size: clamp(1.7rem, 3vw, 2.3rem); letter-spacing: -.035em; }
+      .muted { color: #a9c0c6; }
+      video { display: block; width: 100%; max-height: 650px; margin: 22px 0 10px; border: 1px solid #426268; border-radius: 15px; background: #02090d; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 24px; }
+      .card { padding: 23px; background: #10232c; border: 1px solid #24424a; border-radius: 13px; }
+      .card b { color: #69ead0; }
+      .card h3 { margin: 10px 0 7px; font-size: 1.15rem; }
+      .card p { margin: 0; color: #b5cbd0; }
+      .gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 24px; }
+      figure { margin: 0; padding: 9px; border: 1px solid #26444c; background: #10232c; border-radius: 12px; }
+      figure img { width: 100%; height: auto; display: block; border-radius: 7px; }
+      figcaption { padding: 9px 5px 3px; color: #b5cbd0; font-size: .88rem; }
+      pre { overflow-x: auto; background: #081820; border: 1px solid #284750; border-radius: 10px; padding: 18px; line-height: 1.8; }
+      code { color: #82f3dd; }
+      footer { padding: 27px 0 42px; border-top: 1px solid #20343a; color: #a9c0c6; font-size: .9rem; }
+      @media (max-width: 700px) { nav { gap: 9px; font-size: .8rem; } .grid, .gallery { grid-template-columns: 1fr; } .hero { padding: 48px 0; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="shell">
+        <a class="brand" href="#top"><span class="mark" aria-hidden="true">✓</span> SafeSend</a>
+        <nav aria-label="Main navigation"><a href="#demo">Demo</a><a href="#flow">How it works</a><a href="#screenshots">Screenshots</a><a href="https://github.com/sharonbasovich/safesend">Source</a></nav>
+      </div>
+    </header>
+    <main id="top">
+      <div class="hero">
+        <div class="shell">
+          <span class="eyebrow">3rd Web Hack prototype</span>
+          <h1>Address poisoning, <span>stopped at send time.</span></h1>
+          <p class="lead">A verified payee gets paid instantly. An unknown address waits in a cancellable escrow. A lookalike matching a trusted payee enters a 24-hour quarantine.</p>
+          <div class="actions">
+            <a class="button primary" href="#demo">Watch the recorded demo</a>
+            <a class="button" href="https://github.com/sharonbasovich/safesend">View source and setup</a>
+            <a class="button" href="media/deck.pdf">Open slide deck</a>
+          </div>
+          <p class="notice"><strong>Local test environment:</strong> The video shows real contract interactions on Anvil with mock assets. This public page is a showcase; transactions require running the project and Anvil locally. SafeSend is unaudited and must not be used with real funds.</p>
+        </div>
+      </div>
+      <section id="demo" class="shell">
+        <h2>End-to-end walkthrough</h2>
+        <p class="muted">Watch a poisoned history entry trigger a lookalike warning, quarantine, and full refund, followed by verified and unknown-payee flows.</p>
+        <video controls preload="metadata" poster="media/01-send-lookalike-warning.png"><source src="media/demo.mp4" type="video/mp4" />Your browser does not support embedded video. <a href="media/demo.mp4">Download the demo video.</a></video>
+        <p class="muted">Recorded on a fresh local Anvil chain with public test accounts and mock USDT. No mainnet funds or paid keys were used.</p>
+      </section>
+      <section id="flow" class="shell">
+        <h2>One router, three send paths</h2>
+        <div class="grid">
+          <div class="card"><b>01 · Verified</b><h3>Instant delivery</h3><p>Known payees receive funds directly. No escrow or waiting period.</p></div>
+          <div class="card"><b>02 · Unknown</b><h3>Cancellable escrow</h3><p>New recipients claim after the sender's cooldown. The sender can cancel while pending.</p></div>
+          <div class="card"><b>03 · Lookalike</b><h3>24-hour quarantine</h3><p>A first/last-four fingerprint collision with a verified payee raises an on-chain flag and delays release.</p></div>
+        </div>
+      </section>
+      <section id="screenshots" class="shell">
+        <h2>See the protection in context</h2>
+        <p class="muted">Screenshots from the local Anvil demo. The address-poisoning attack tool is educational and uses test assets only.</p>
+        <div class="gallery">
+          <figure><img loading="lazy" src="media/01-send-lookalike-warning.png" alt="Send screen warning that the pasted address resembles a verified payee" /><figcaption>Lookalike warning before sending</figcaption></figure>
+          <figure><img loading="lazy" src="media/02-history-poisoned.png" alt="Transaction history containing a poisoned address entry" /><figcaption>Poisoned transaction history</figcaption></figure>
+          <figure><img loading="lazy" src="media/03-pending-quarantine.png" alt="Pending payment quarantined with a countdown" /><figcaption>24-hour quarantine</figcaption></figure>
+          <figure><img loading="lazy" src="media/04-refund-confirmed.png" alt="Confirmation that the sender cancelled and recovered test funds" /><figcaption>Sender cancellation and refund</figcaption></figure>
+          <figure><img loading="lazy" src="media/05-verified-payees.png" alt="Verified payee list showing trusted recipients" /><figcaption>Verified payee book</figcaption></figure>
+          <figure><img loading="lazy" src="media/06-attacker-console.png" alt="Local test attacker console used to reproduce the poisoning attempt" /><figcaption>Educational attacker console</figcaption></figure>
+        </div>
+      </section>
+      <section class="shell">
+        <h2>Run the real app locally</h2>
+        <p class="muted">The contracts and interactive web UI are open source. You need Foundry and Node.js; the <a href="https://github.com/sharonbasovich/safesend#quick-start--local-demo-2-min">README</a> has the complete setup.</p>
+        <pre><code>git clone https://github.com/sharonbasovich/safesend.git
+cd safesend
+make anvil          # separate terminal
+make deploy-local
+make seed
+make web            # http://localhost:5173/?demo=1</code></pre>
+      </section>
+    </main>
+    <footer><div class="shell">SafeSend · Unaudited educational prototype · <a href="https://github.com/sharonbasovich/safesend">MIT source and limitations</a></div></footer>
+  </body>
+</html>
