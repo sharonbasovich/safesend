@@ -9,3 +9,4 @@ web/dist/
 # os/editor
 .DS_Store
 *.log
+*.tsbuildinfo
