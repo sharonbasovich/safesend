@@ -1,0 +1,11 @@
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+.env
+# node
+node_modules/
+web/dist/
+# os/editor
+.DS_Store
+*.log
