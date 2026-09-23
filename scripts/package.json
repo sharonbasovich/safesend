@@ -1,0 +1,14 @@
+{
+  "name": "safesend-scripts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed": "tsx seed-demo.ts"
+  },
+  "dependencies": {
+    "viem": "^2.31.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}
