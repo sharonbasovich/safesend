@@ -2,7 +2,7 @@
 
 **3rd Web Hack entry. Unaudited testnet prototype — do not use with real funds.**
 
-[Local-Anvil demo video](docs/safesend-demo-anvil-e2e.mp4) · [Eight-slide deck](docs/deck.pdf) · [Demo screenshots](docs/screenshots/)
+[Public demo showcase](https://sharonbasovich.github.io/safesend/) · [Local-Anvil demo video](docs/safesend-demo-anvil-e2e.mp4) · [Eight-slide deck](docs/deck.pdf) · [Demo screenshots](docs/screenshots/)
 
 SafeSend is a non-custodial payment router that protects senders from
 address-poisoning attacks. Instead of giving your money directly to an address

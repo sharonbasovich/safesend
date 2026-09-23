@@ -78,8 +78,9 @@ https://github.com/sharonbasovich/safesend
 - Video: https://github.com/sharonbasovich/safesend/blob/main/docs/safesend-demo-anvil-e2e.mp4
   (real local-Anvil end-to-end walkthrough; upload to a Devpost-supported video
   host if required)
-- Web preview: the web UI requires a local Anvil node and is not a live public
-  chain demo; watch the video or run the local demo below.
+- Web showcase: https://sharonbasovich.github.io/safesend/ — video, deck, and
+  screenshots. It is not a live public-chain demo; the interactive web UI
+  requires a local Anvil node as described below.
 - Local demo: `make anvil && make deploy-local && make seed && make web`,
   then open `http://localhost:5173/?demo=1`
 - Screenshots: `docs/screenshots/` (attack → quarantine → refund → verified
