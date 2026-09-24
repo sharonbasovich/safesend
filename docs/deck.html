@@ -4,10 +4,12 @@
 <meta charset="utf-8">
 <title>SafeSend — deck</title>
 <style>
+  @page { size: 297mm 167mm; margin: 0; }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; background:#0b0d12; color:#e8eaf0; }
+  body { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; background:#0b0d12; color:#e8eaf0; print-color-adjust: exact; }
   .slide { width: 297mm; height: 167mm; page-break-after: always; padding: 16mm 20mm;
            display: flex; flex-direction: column; justify-content: center; }
+  .slide:last-child { page-break-after: auto; }
   h1 { font-size: 54pt; font-weight: 800; letter-spacing:-1px; }
   h1 .accent { color:#818cf8; }
   h2 { font-size: 34pt; font-weight: 800; margin-bottom: 9mm; letter-spacing:-0.5px; }
@@ -44,31 +46,31 @@
 <div class="slide">
   <h2><span class="num">01</span>Anyone can make your history lie</h2>
   <ul>
-    <li>Wallets render addresses as <span class="mono">0x7099…79c8</span> — only the first and last 4 hex are ever checked.</li>
+    <li>Many wallets abbreviate addresses as <span class="mono">0x7099…79c8</span>; people may check only those visible edges.</li>
     <li>Attackers vanity-generate a <b>lookalike</b> matching those same edges of a real payee.</li>
     <li>They inject it into your history: a <b>zero-value <span class="mono">transferFrom</span></b> (succeeds on USDT-style tokens with <b>no allowance</b>) plus a dust transfer.</li>
-    <li>You copy your "last counterparty", hit send — <span class="red">irreversible</span>. Documented single-victim losses reach tens of millions; campaigns run continuously because they cost the attacker ~nothing.</li>
+    <li>If you copy the lookalike as your "last counterparty" and send directly, the transfer has no built-in cancellation path.</li>
   </ul>
 </div>
 
 <!-- 3 — idea -->
 <div class="slide">
-  <h2><span class="num">02</span>Same fingerprint the wallet shows — enforced on-chain</h2>
+  <h2><span class="num">02</span>A visible-address fingerprint, enforced on-chain</h2>
   <p style="margin-bottom:6mm">SafeSend computes <span class="mono">fp = first4 << 16 | last4</span> of every recipient and routes accordingly:</p>
   <table>
     <tr><th>Recipient</th><th>Routing</th></tr>
     <tr><td>Verified payee</td><td class="green">Instant transfer — no escrow</td></tr>
     <tr><td>Unknown payee</td><td class="amber">Sender-cancellable escrow · recipient claims after cooldown</td></tr>
-    <tr><td>Fingerprint collides with a verified payee</td><td class="red">24h quarantine + on-chain LookalikeFlagged event · always cancellable</td></tr>
+    <tr><td>Fingerprint collides with a verified payee</td><td class="red">24h quarantine + LookalikeFlagged · cancellable · claim needs sender's on-chain approval</td></tr>
   </table>
 </div>
 
 <!-- 4 — contract -->
 <div class="slide">
-  <h2><span class="num">03</span>The contract — a router, not a vault</h2>
+  <h2><span class="num">03</span>The contract — routing and escrow</h2>
   <div class="grid2">
     <div class="card"><b>send(to, token, amount)</b><br>Verified → instant. Lookalike → 24h lock + flag. Unknown → escrow for sender's cooldown (60s–7d).</div>
-    <div class="card"><b>cancel(id)</b> sender only, any time → full refund<br><b>claim(id)</b> recipient only, after unlock → pays out <b>and verifies</b> them</div>
+    <div class="card"><b>cancel(id)</b> sender only, while pending → full refund<br><b>claim(id)</b> recipient only, after unlock → pays out <b>and verifies</b> — flagged escrows also need sender's <b>approveLookalike(id)</b></div>
     <div class="card"><b>reclaim(id)</b> after unlock + 30d — dead-letter recovery</div>
     <div class="card"><b>addPayee / removePayee / setCooldown</b> — the sender's own book. No owner. No admin. No fees.</div>
   </div>
@@ -82,8 +84,8 @@
     <li><b>Attacker console</b> (Anvil only): pick a payee → generated lookalike → <b>poison</b> (zero-value transferFrom) + <b>dust</b> (impersonation).</li>
     <li><b>History</b> flags both injected rows — the lookalike now "looks like" the real payee.</li>
     <li>Paste it into <b>Send</b> → <span class="red">LOOKALIKE badge</span> → contract quarantines + emits the flag.</li>
-    <li><b>Pending</b> → cancel → full refund. A raw transfer here is gone forever.</li>
-    <li>Same flow to the real payee → <span class="green">instant</span>. New contact → escrow → they claim → <span class="green">verified forever</span>.</li>
+    <li><b>Pending</b> → cancel → full refund. Even after 24h, the lookalike can't claim — claim also requires the sender's approval.</li>
+    <li>Same flow to the real payee → <span class="green">instant</span>. New contact → escrow → they claim → <span class="green">verified for later sends</span>.</li>
   </ul>
 </div>
 
@@ -91,7 +93,7 @@
 <div class="slide">
   <h2><span class="num">05</span>Engineering rigor</h2>
   <ul>
-    <li><b>45 Foundry tests</b>: unit, negative (NotRecipient / NotSender / Locked / TooEarly …), event assertions.</li>
+    <li><b>58 Foundry tests</b>: unit, negative (NotRecipient / NotSender / Locked / TooEarly …), event assertions.</li>
     <li><b>Fuzz</b> (512 runs): random amounts, recipients, timings across every transition.</li>
     <li><b>Invariants</b> (128 × depth 32): router solvency for ERC-20 + ETH; nextId monotonic; verified recipients can never sit in escrow.</li>
     <li><b>100% line coverage</b> on SafeSend.sol · <span class="mono">forge fmt</span> clean · gas snapshot.</li>
@@ -104,7 +106,7 @@
   <h2><span class="num">06</span>Honest limitations</h2>
   <ul>
     <li><b>Detection, not prevention</b> — only protects sends routed through SafeSend; raw transfer() is untouched.</li>
-    <li><b>4-hex fingerprint</b> — covers the common display convention; an attacker matching ≥6 chars can still slip by.</li>
+    <li><b>4-hex fingerprint</b> — a different visible-address pattern, such as first-six matching without the last four, can slip by.</li>
     <li><b>addPayee trusts the sender</b> — out-of-band verification is the human's job; claim-to-verify is the safer path.</li>
     <li><b>Unaudited prototype.</b> Prior art: REVERSO / ERC-20R (arbitrated reversals — we use a deterministic rule, no judges), Argent trusted contacts (ours self-grows from deliveries), explorer tags (off-chain — ours enforces on-chain).</li>
   </ul>
@@ -112,8 +114,8 @@
 
 <!-- 8 — close -->
 <div class="slide">
-  <h2><span class="num">07</span>The most common way people lose to poisoning is now a refund</h2>
-  <p class="sub">Copy-from-history is a UI habit. SafeSend turns its worst case — a lookalike paste —<br>into a 24-hour escrow the attacker can never claim and the sender can always cancel.</p>
+  <h2><span class="num">07</span>Sender approval gates flagged payments</h2>
+  <p class="sub">Copy-from-history is a UI habit. SafeSend places a lookalike paste in a 24-hour escrow.<br>The recipient needs sender approval to claim; after claim, that full address is verified for future instant sends.</p>
   <ul>
     <li>Runs today: <span class="mono">make anvil && make deploy-local && make seed && make web</span></li>
     <li>Base Sepolia deploy path included; attack tooling confined to local Anvil, labeled for education.</li>

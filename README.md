@@ -4,20 +4,20 @@
 
 [Public demo showcase](https://sharonbasovich.github.io/safesend/) · [Local-Anvil demo video](docs/safesend-demo-anvil-e2e.mp4) · [Eight-slide deck](docs/deck.pdf) · [Demo screenshots](docs/screenshots/)
 
-SafeSend is a non-custodial payment router that protects senders from
-address-poisoning attacks. Instead of giving your money directly to an address
-you pasted from transaction history (the single most common way people lose
-funds to poisoning), you send through SafeSend:
+SafeSend is a payment router that gives senders an on-chain check before a
+flagged lookalike can receive escrowed funds. Instead of paying an address
+copied from transaction history directly, you send through SafeSend:
 
 - **Verified payee** → funds move instantly, no escrow.
 - **Unknown payee** → funds sit in a sender-cancellable escrow until the
   recipient claims.
 - **Lookalike payee** — same first/last 4 hex chars as one of your verified
   payees → funds land in a **24-hour quarantine**, an on-chain
-  `LookalikeFlagged` event fires, and you can cancel at any time.
+  `LookalikeFlagged` event fires, you can cancel at any time, and the
+  recipient can never claim without your explicit on-chain approval.
 
-When the intended recipient claims after the unlock window, SafeSend records
-them as a *verified payee* for your future sends — the payee book grows
+When the address named as recipient claims after the unlock window, SafeSend records
+it as a *verified payee* for your future sends — the payee book grows
 organically out of successful deliveries.
 
 ## How it works
@@ -35,12 +35,17 @@ sender's verified payees carry each fingerprint, so `send()` can distinguish:
 | `to` is …                                | Result                                            |
 |------------------------------------------|---------------------------------------------------|
 | Verified payee                           | instant transfer, `Sent` event                     |
-| Fingerprint-collides with a verified one | escrow, `unlockAt = now + 24h`, `LookalikeFlagged` |
+| Fingerprint-collides with a verified one | escrow, `unlockAt = now + 24h`, `LookalikeFlagged`, claim also requires `approveLookalike` |
 | Otherwise                                | escrow, `unlockAt = now + sender cooldown`         |
 
 - `cancel(id)` — sender only, any time while `Pending`. Full refund.
 - `claim(id)` — recipient only, after `unlockAt`. Pays out **and verifies** the
-  recipient (`PayeeVerified`).
+  recipient (`PayeeVerified`). Lookalike escrows additionally require the
+  sender's `approveLookalike(id)` first — time alone never unlocks them.
+- `approveLookalike(id)` — sender only, pending `LookalikeOfVerified` escrows
+  only. Emits `LookalikeApproved`. Approval is for this escrow; if the
+  recipient claims it, the full address becomes verified for future instant
+  sends. The sender can still cancel while the escrow is pending.
 - `reclaim(id)` — sender only, after `unlockAt + 30 days`. Dead-letter
   recovery for recipients that never claim.
 - `addPayee` / `removePayee` — the sender's own verified book, on-chain.
@@ -123,7 +128,8 @@ the same UI uses wagmi instead.
    for 24 h and emits `LookalikeFlagged`.
 3. **Pending** — the quarantined escrow shows a countdown. Click
    *"Cancel & refund"* — funds come straight back. A raw transfer here would
-   be gone forever.
+   be gone forever, and even after the 24 h lock the lookalike cannot claim
+   unless the sender approves it on-chain (`Approve this flagged recipient`).
 4. **Send** to the *real* Terry — *VERIFIED PAYEE* badge, instant delivery,
    no escrow.
 5. **Send** to the *new friend* — *UNKNOWN PAYEE*, escrowed. Switch the
@@ -134,14 +140,16 @@ the same UI uses wagmi instead.
 
 ```bash
 cd contracts
-forge test -vvv        # 45 tests — unit, negative, event, fuzz, invariant
+forge test -vvv        # 58 tests — unit, negative, event, fuzz, invariant
 forge fmt --check
 forge snapshot
 forge coverage         # 100% lines on SafeSend.sol
 ```
 
 - **Unit/negative**: instant vs escrow vs quarantine paths, cancel/claim/
-  reclaim authorization, self-send, zero amounts, cooldown bounds, ETH pulls.
+  reclaim authorization, self-send, zero amounts, cooldown bounds, ETH pulls,
+  lookalike approval gate (no claim without `approveLookalike`, sender-only
+  approval, cancel still allowed after approval).
 - **Fuzz**: random amounts, recipients, timings across all state transitions.
 - **Invariant** (`SafeSend.invariant.t.sol`): router never owes more than it
   holds (ERC-20 and ETH), `nextId` monotonic, a verified recipient can never
@@ -169,16 +177,18 @@ The key lives only in your local `.env` (gitignored). `Deploy.s.sol` writes
 - **Detection, not prevention.** SafeSend can't stop a raw `transfer()` — it
   only protects sends that go through the router. Poisoned history still
   exists; the defense is at send time.
-- **Fingerprint = first/last 4 hex only.** An attacker who matches more
-  characters (e.g. first 6) still defeats the check; this covers the common
-  first/last-4 wallet display convention, not all lookalikes.
+- **Fingerprint = first/last 4 hex only.** A lookalike that matches a
+  different set of visible characters, such as the first six but not the last
+  four, can evade this check. The payee book must also contain the real payee
+  before a collision can be detected.
 - **Verification is only as good as its source.** `addPayee` trusts the
   sender's out-of-band check. If a user verifies a lookalike, SafeSend can't
   help. Claim-to-verify is safer: a recipient can only claim funds actually
   routed to them.
-- **Quarantine ≠ trap.** Both sender and the real recipient keep their
-  powers — the sender can always cancel, the recipient can always claim
-  after unlock, and either can walk away (`reclaim` after 30 days).
+- **Quarantine ≠ trap.** The sender keeps full control: they can always
+  cancel (even after approving), approve the flagged recipient explicitly,
+  or walk away (`reclaim` after 30 days). A flagged recipient cannot
+  self-release — no approval is ever automatic.
 - **Reorgs / UI trust.** Lookalike badges depend on on-chain event reads;
   use your own RPC in anything real.
 - **Unaudited.** Reviewed with unit/fuzz/invariant tests only. Do not deploy

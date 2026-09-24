@@ -3,6 +3,7 @@ import { parseAbi, parseAbiItem } from "viem";
 export const safeSendAbi = parseAbi([
   "function send(address token, address to, uint128 amount) payable returns (uint256)",
   "function claim(uint256 id)",
+  "function approveLookalike(uint256 id)",
   "function cancel(uint256 id)",
   "function reclaim(uint256 id)",
   "function addPayee(address p)",
@@ -14,6 +15,7 @@ export const safeSendAbi = parseAbi([
   "function verified(address, address) view returns (bool)",
   "function fpCount(address, uint32) view returns (uint16)",
   "function transfers(uint256) view returns (address token, address from, address to, uint128 amount, uint64 unlockAt, uint8 status, uint8 reason)",
+  "function lookalikeApproved(uint256) view returns (bool)",
   "function nextId() view returns (uint256)",
 ]);
 
@@ -41,6 +43,7 @@ export const escrowedEvent = parseAbiItem(
 export const lookalikeFlaggedEvent = parseAbiItem(
   "event LookalikeFlagged(uint256 indexed id, address indexed from, address indexed to, uint32 fingerprint)"
 );
+export const lookalikeApprovedEvent = parseAbiItem("event LookalikeApproved(uint256 indexed id)");
 export const claimedEvent = parseAbiItem("event Claimed(uint256 indexed id)");
 export const cancelledEvent = parseAbiItem("event Cancelled(uint256 indexed id)");
 export const reclaimedEvent = parseAbiItem("event Reclaimed(uint256 indexed id)");

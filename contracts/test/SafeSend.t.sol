@@ -301,6 +301,159 @@ contract SafeSendTest is Test {
         assertEq(token.balanceOf(lookalike), 0);
     }
 
+    // ---------- lookalike approval gate ----------
+
+    function _lookalikeEscrow() internal returns (uint256 id, address lookalike) {
+        vm.prank(alice);
+        router.addPayee(terry);
+        lookalike = _lookalikeOf(terry);
+        vm.prank(alice);
+        id = router.send(address(token), lookalike, AMT);
+    }
+
+    function test_lookalikeClaim_atUnlock_revertsWithoutApproval() public {
+        (uint256 id, address lookalike) = _lookalikeEscrow();
+        vm.warp(block.timestamp + 24 hours);
+        vm.prank(lookalike);
+        vm.expectRevert(SafeSend.NotApproved.selector);
+        router.claim(id);
+    }
+
+    function test_lookalikeClaim_farAfterUnlock_revertsWithoutApproval() public {
+        // time alone never unlocks a flagged recipient — approval is required
+        (uint256 id, address lookalike) = _lookalikeEscrow();
+        vm.warp(block.timestamp + 24 hours + 29 days);
+        vm.prank(lookalike);
+        vm.expectRevert(SafeSend.NotApproved.selector);
+        router.claim(id);
+        assertFalse(router.lookalikeApproved(id));
+        assertFalse(router.verified(alice, lookalike));
+    }
+
+    function test_approveLookalike_byRecipient_revertsSelfApprove() public {
+        (uint256 id, address lookalike) = _lookalikeEscrow();
+        vm.prank(lookalike);
+        vm.expectRevert(SafeSend.NotSender.selector);
+        router.approveLookalike(id);
+    }
+
+    function test_approveLookalike_byThirdParty_reverts() public {
+        (uint256 id,) = _lookalikeEscrow();
+        vm.prank(attacker);
+        vm.expectRevert(SafeSend.NotSender.selector);
+        router.approveLookalike(id);
+    }
+
+    function test_approveLookalike_unknownEscrow_reverts() public {
+        vm.prank(alice);
+        vm.expectRevert(SafeSend.NotSender.selector);
+        router.approveLookalike(999);
+    }
+
+    function test_approveLookalike_unknownPayeeEscrow_revertsNotLookalike() public {
+        uint256 id = _escrowTo(bob, AMT);
+        vm.prank(alice);
+        vm.expectRevert(SafeSend.NotLookalike.selector);
+        router.approveLookalike(id);
+    }
+
+    function test_approveLookalike_afterCancel_revertsNotPending() public {
+        (uint256 id,) = _lookalikeEscrow();
+        vm.prank(alice);
+        router.cancel(id);
+        vm.prank(alice);
+        vm.expectRevert(SafeSend.NotPending.selector);
+        router.approveLookalike(id);
+    }
+
+    function test_approveLookalike_emitsEvent() public {
+        (uint256 id,) = _lookalikeEscrow();
+        vm.prank(alice);
+        vm.expectEmit(true, false, false, false);
+        emit SafeSend.LookalikeApproved(id);
+        router.approveLookalike(id);
+        assertTrue(router.lookalikeApproved(id));
+    }
+
+    function test_approveThenClaim_afterUnlock_paysAndVerifies() public {
+        // legitimate flagged recipient: sender confirms out-of-band, approves,
+        // recipient claims after the 24h lock and becomes verified
+        (uint256 id, address lookalike) = _lookalikeEscrow();
+        vm.prank(alice);
+        router.approveLookalike(id);
+
+        // still locked during the 24h window even with approval
+        vm.prank(lookalike);
+        vm.expectRevert(SafeSend.Locked.selector);
+        router.claim(id);
+
+        vm.warp(block.timestamp + 24 hours);
+        vm.prank(lookalike);
+        router.claim(id);
+        assertEq(token.balanceOf(lookalike), AMT);
+        assertTrue(router.verified(alice, lookalike));
+
+        // Consent to this claim also trusts the address for later instant sends.
+        vm.prank(alice);
+        uint256 next = router.send(address(token), lookalike, AMT);
+        assertEq(next, 0);
+        assertEq(token.balanceOf(lookalike), 2 * AMT);
+    }
+
+    function test_approvalIsPerEscrow_evenAfterFirstClaimVerifiesAddress() public {
+        (uint256 first, address lookalike) = _lookalikeEscrow();
+        vm.prank(alice);
+        uint256 second = router.send(address(token), lookalike, AMT);
+
+        vm.prank(alice);
+        router.approveLookalike(first);
+        vm.warp(block.timestamp + 24 hours);
+        vm.prank(lookalike);
+        router.claim(first);
+        assertTrue(router.verified(alice, lookalike));
+
+        // The earlier flagged transfer keeps its own reason and approval gate.
+        vm.prank(lookalike);
+        vm.expectRevert(SafeSend.NotApproved.selector);
+        router.claim(second);
+        assertFalse(router.lookalikeApproved(second));
+    }
+
+    function test_manualPayeeBookChange_doesNotApproveExistingFlaggedEscrow() public {
+        (uint256 id, address lookalike) = _lookalikeEscrow();
+        vm.startPrank(alice);
+        router.removePayee(terry);
+        router.addPayee(lookalike);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 24 hours);
+        vm.prank(lookalike);
+        vm.expectRevert(SafeSend.NotApproved.selector);
+        router.claim(id);
+    }
+
+    function test_cancel_afterApproval_stillRefunds() public {
+        // approval is not consent to release — the sender can still pull funds back
+        (uint256 id, address lookalike) = _lookalikeEscrow();
+        vm.prank(alice);
+        router.approveLookalike(id);
+        vm.warp(block.timestamp + 24 hours);
+        vm.prank(alice);
+        router.cancel(id);
+        assertEq(token.balanceOf(alice), 100_000e6);
+        assertEq(token.balanceOf(lookalike), 0);
+    }
+
+    function test_unknownPayeeClaim_onSchedule_needsNoApproval() public {
+        // regression guard: the gate applies only to LookalikeOfVerified
+        uint256 id = _escrowTo(bob, AMT);
+        vm.warp(block.timestamp + 1 hours);
+        vm.prank(bob);
+        router.claim(id);
+        assertEq(token.balanceOf(bob), AMT);
+        assertTrue(router.verified(alice, bob));
+    }
+
     // ---------- reclaim ----------
 
     function test_reclaim_beforeWindow_reverts() public {

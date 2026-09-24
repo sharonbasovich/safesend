@@ -190,7 +190,7 @@ export function SendPage() {
                     (<AddressView address={risk.match} />)
                   </>
                 ) : null}
-                . Escrowed 24h and flagged on-chain.
+                . Escrowed 24h and flagged on-chain — the recipient can only claim with your approval.
               </>
             )}
             {risk.kind === "unknown" && (

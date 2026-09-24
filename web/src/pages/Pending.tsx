@@ -2,20 +2,20 @@ import { useQuery } from "@tanstack/react-query";
 import { formatEther, formatUnits, zeroAddress, type Address } from "viem";
 import { useEffect, useState } from "react";
 import { safeSendAbi } from "../lib/abi";
-import { fetchEscrows, fetchFlaggedIds, type TransferRow } from "../lib/router";
+import { fetchEscrows, type TransferRow } from "../lib/router";
 import { publicClientFor } from "../lib/chains";
 import { useApp } from "../lib/state";
 import { AddressView } from "../components/AddressView";
 
 const RECLAIM_AFTER = 30n * 24n * 3600n;
 
-function Countdown({ unlockAt }: { unlockAt: bigint }) {
+function Countdown({ unlockAt, chainTime }: { unlockAt: bigint; chainTime: bigint }) {
   const [now, setNow] = useState(BigInt(Math.floor(Date.now() / 1000)));
   useEffect(() => {
     const t = setInterval(() => setNow(BigInt(Math.floor(Date.now() / 1000))), 1000);
     return () => clearInterval(t);
   }, []);
-  const left = Number(unlockAt - now);
+  const left = Number(unlockAt - (chainTime > now ? chainTime : now));
   if (left <= 0) return <span className="text-emerald-400">unlocked</span>;
   const h = Math.floor(left / 3600);
   const m = Math.floor((left % 3600) / 60);
@@ -28,27 +28,53 @@ function Countdown({ unlockAt }: { unlockAt: bigint }) {
   );
 }
 
-function Card({ t, flagged }: { t: TransferRow; flagged: boolean }) {
-  const { me, deployment, sendTx } = useApp();
+function Card({ t, chainTime }: { t: TransferRow; chainTime: bigint }) {
+  const { me, deployment, sendTx, chainId } = useApp();
   const iAmSender = me?.toLowerCase() === t.from.toLowerCase();
   const iAmRecipient = me?.toLowerCase() === t.to.toLowerCase();
   const pending = t.status === 0;
-  const now = BigInt(Math.floor(Date.now() / 1000));
+  // The local Anvil seed can move chain time ahead of the computer's clock.
+  const now = BigInt(Math.max(Math.floor(Date.now() / 1000), Number(chainTime)));
+  const flagged = pending && t.reason === 1;
   const unlocked = now >= t.unlockAt;
   const reclaimable = now >= t.unlockAt + RECLAIM_AFTER;
   const isEth = t.token === zeroAddress;
   const counterparty: Address = iAmSender ? t.to : t.from;
   const [busy, setBusy] = useState(false);
+  const pc = publicClientFor(chainId);
 
-  async function act(fn: "claim" | "cancel" | "reclaim") {
+  const { data: approved } = useQuery({
+    queryKey: ["lookalikeApproved", chainId, deployment?.safeSend, t.id.toString()],
+    enabled: Boolean(deployment && flagged && pending),
+    refetchInterval: 4000,
+    queryFn: () =>
+      pc.readContract({
+        address: deployment!.safeSend,
+        abi: safeSendAbi,
+        functionName: "lookalikeApproved",
+        args: [t.id],
+      }),
+  });
+  const claimable = unlocked && (!flagged || approved === true);
+
+  async function act(fn: "claim" | "cancel" | "reclaim" | "approveLookalike") {
     if (!deployment) return;
     setBusy(true);
-    await sendTx(fn === "claim" ? "Claim" : fn === "cancel" ? "Cancel & refund" : "Reclaim", {
-      to: deployment.safeSend,
-      abi: safeSendAbi,
-      functionName: fn,
-      args: [t.id],
-    });
+    await sendTx(
+      fn === "claim"
+        ? "Claim"
+        : fn === "cancel"
+          ? "Cancel & refund"
+          : fn === "approveLookalike"
+            ? "Approve flagged recipient"
+            : "Reclaim",
+      {
+        to: deployment.safeSend,
+        abi: safeSendAbi,
+        functionName: fn,
+        args: [t.id],
+      }
+    );
     setBusy(false);
   }
 
@@ -74,14 +100,14 @@ function Card({ t, flagged }: { t: TransferRow; flagged: boolean }) {
       <div className="mt-3 flex items-center justify-between">
         <div>
           <div className="text-xs text-zinc-500">{iAmSender ? "to" : "from"}</div>
-          <AddressView address={counterparty} />
+          <AddressView address={counterparty} full={Boolean(iAmSender && flagged)} className="break-all text-xs" />
         </div>
         <div className="text-right">
           <div className="font-mono text-lg">
             {isEth ? `${formatEther(t.amount)} ETH` : `${formatUnits(t.amount, 6)} mUSDT`}
           </div>
           <div className="text-xs text-zinc-500">
-            {pending ? <Countdown unlockAt={t.unlockAt} /> : "settled"}
+            {pending ? <Countdown unlockAt={t.unlockAt} chainTime={chainTime} /> : "settled"}
           </div>
         </div>
       </div>
@@ -97,13 +123,26 @@ function Card({ t, flagged }: { t: TransferRow; flagged: boolean }) {
               Cancel & refund
             </button>
           )}
+          {iAmSender && flagged && !approved && (
+            <button
+              disabled={busy}
+              onClick={() => act("approveLookalike")}
+              className="flex-1 rounded-lg bg-amber-700 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-40"
+            >
+              Approve escrow #{t.id.toString()}
+            </button>
+          )}
           {iAmRecipient && (
             <button
-              disabled={busy || !unlocked}
+              disabled={busy || !claimable}
               onClick={() => act("claim")}
               className="flex-1 rounded-lg bg-emerald-700 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-40"
             >
-              {unlocked ? "Claim (becomes verified payee)" : "Claim — locked"}
+              {claimable
+                ? "Claim (becomes verified payee)"
+                : flagged && !approved
+                  ? "Claim — needs sender approval"
+                  : "Claim — locked"}
             </button>
           )}
           {iAmSender && !unlocked && iAmRecipient === false && null}
@@ -117,6 +156,19 @@ function Card({ t, flagged }: { t: TransferRow; flagged: boolean }) {
             </button>
           )}
         </div>
+      )}
+      {pending && flagged && !approved && (
+        <p className="mt-2 text-xs text-amber-500">
+          Check the full recipient address above before approving this escrow. Approval lets that
+          address claim after the 24-hour lock. Once it claims, it becomes verified for future
+          instant sends. You can still cancel while this escrow is pending.
+        </p>
+      )}
+      {pending && flagged && approved && iAmSender && (
+        <p className="mt-2 text-xs text-amber-500">
+          Approved for this escrow. Once this address claims, it becomes verified for future
+          instant sends. You can still cancel while pending.
+        </p>
       )}
       {pending && iAmRecipient && !unlocked && (
         <p className="mt-2 text-xs text-zinc-500">
@@ -136,11 +188,11 @@ export function PendingPage() {
     enabled: Boolean(me && deployment),
     refetchInterval: 4000,
     queryFn: async () => {
-      const [rows, flagged] = await Promise.all([
+      const [rows, block] = await Promise.all([
         fetchEscrows(pc, deployment!, me!),
-        fetchFlaggedIds(pc, deployment!, me!),
+        pc.getBlock({ blockTag: "latest" }),
       ]);
-      return { rows, flagged };
+      return { rows, chainTime: block.timestamp };
     },
   });
 
@@ -158,13 +210,13 @@ export function PendingPage() {
         <p className="text-sm text-zinc-500">No pending escrows for this account.</p>
       )}
       {pending.map((t) => (
-        <Card key={t.id.toString()} t={t} flagged={data?.flagged.has(t.id) ?? t.reason === 1} />
+        <Card key={t.id.toString()} t={t} chainTime={data?.chainTime ?? 0n} />
       ))}
       {settled.length > 0 && (
         <>
           <h3 className="pt-2 text-sm font-semibold text-zinc-500">Settled</h3>
           {settled.map((t) => (
-            <Card key={t.id.toString()} t={t} flagged={false} />
+            <Card key={t.id.toString()} t={t} chainTime={data?.chainTime ?? 0n} />
           ))}
         </>
       )}
