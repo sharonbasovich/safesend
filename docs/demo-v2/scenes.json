@@ -1,0 +1,46 @@
+[
+  {
+    "t": "0.6",
+    "scene": "CARD: SafeSend"
+  },
+  {
+    "t": "6.4",
+    "scene": "1 threat: attacker console"
+  },
+  {
+    "t": "19.9",
+    "scene": "1b threat: victim history"
+  },
+  {
+    "t": "27.4",
+    "scene": "2 flagged send"
+  },
+  {
+    "t": "38.5",
+    "scene": "3 sender review"
+  },
+  {
+    "t": "48.7",
+    "scene": "4 recipient view locked"
+  },
+  {
+    "t": "55.6",
+    "scene": "4b time travel"
+  },
+  {
+    "t": "72.8",
+    "scene": "5 explicit approval"
+  },
+  {
+    "t": "87.0",
+    "scene": "6 post-unlock claim"
+  },
+  {
+    "t": "98.1",
+    "scene": "7 future trust"
+  },
+  {
+    "t": "113.8",
+    "scene": "CARD: SafeSend"
+  }
+]
