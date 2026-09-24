@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="SafeSend is an unaudited local-Anvil prototype that quarantines address-poisoning lookalikes before payment." />
+    <meta name="description" content="SafeSend is an unaudited local-Anvil payment prototype that locks flagged lookalikes and requires sender approval before they can claim." />
     <title>SafeSend — poison-aware payments</title>
     <style>
       :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #07121a; color: #f0f8f8; }
@@ -59,33 +59,33 @@
       <div class="hero">
         <div class="shell">
           <span class="eyebrow">3rd Web Hack prototype</span>
-          <h1>Address poisoning, <span>stopped at send time.</span></h1>
-          <p class="lead">A verified payee gets paid instantly. An unknown address waits in a cancellable escrow. A lookalike matching a trusted payee enters a 24-hour quarantine.</p>
+          <h1>Flagged lookalikes <span>need sender approval.</span></h1>
+          <p class="lead">A verified payee gets paid instantly. An unknown address waits in a cancellable escrow. A lookalike matching a trusted payee enters a 24-hour lock and cannot claim without the sender approving that escrow on-chain.</p>
           <div class="actions">
             <a class="button primary" href="#demo">Watch the recorded demo</a>
             <a class="button" href="https://github.com/sharonbasovich/safesend">View source and setup</a>
             <a class="button" href="media/deck.pdf">Open slide deck</a>
           </div>
-          <p class="notice"><strong>Local test environment:</strong> The video shows real contract interactions on Anvil with mock assets. This public page is a showcase; transactions require running the project and Anvil locally. SafeSend is unaudited and must not be used with real funds.</p>
+          <p class="notice"><strong>Local test environment:</strong> The video shows real contract interactions on Anvil with mock assets. It records the cancellation path; the current contract also requires sender approval before a flagged recipient can claim. This page is a showcase; transactions require running Anvil locally. SafeSend is unaudited and must not be used with real funds.</p>
         </div>
       </div>
       <section id="demo" class="shell">
         <h2>End-to-end walkthrough</h2>
         <p class="muted">Watch a poisoned history entry trigger a lookalike warning, quarantine, and full refund, followed by verified and unknown-payee flows.</p>
         <video controls preload="metadata" poster="media/01-send-lookalike-warning.png"><source src="media/demo.mp4" type="video/mp4" />Your browser does not support embedded video. <a href="media/demo.mp4">Download the demo video.</a></video>
-        <p class="muted">Recorded on a fresh local Anvil chain with public test accounts and mock USDT. No mainnet funds or paid keys were used.</p>
+        <p class="muted">Recorded on a fresh local Anvil chain with public test accounts and mock USDT. The footage predates the approval button; the cancellation and refund flow remains valid. No mainnet funds or paid keys were used.</p>
       </section>
       <section id="flow" class="shell">
         <h2>One router, three send paths</h2>
         <div class="grid">
           <div class="card"><b>01 · Verified</b><h3>Instant delivery</h3><p>Known payees receive funds directly. No escrow or waiting period.</p></div>
           <div class="card"><b>02 · Unknown</b><h3>Cancellable escrow</h3><p>New recipients claim after the sender's cooldown. The sender can cancel while pending.</p></div>
-          <div class="card"><b>03 · Lookalike</b><h3>24-hour quarantine</h3><p>A first/last-four fingerprint collision with a verified payee raises an on-chain flag and delays release.</p></div>
+          <div class="card"><b>03 · Lookalike</b><h3>Lock and approval</h3><p>A first/last-four fingerprint collision raises an on-chain flag and a 24-hour lock. The recipient can claim only after the sender approves that escrow. A successful claim verifies the full address for future instant sends.</p></div>
         </div>
       </section>
       <section id="screenshots" class="shell">
-        <h2>See the protection in context</h2>
-        <p class="muted">Screenshots from the local Anvil demo. The address-poisoning attack tool is educational and uses test assets only.</p>
+        <h2>See the prototype in context</h2>
+        <p class="muted">Screenshots from the recorded local Anvil cancellation demo. The current source adds explicit sender approval for flagged claims. The attack tool is educational and uses test assets only.</p>
         <div class="gallery">
           <figure><img loading="lazy" src="media/01-send-lookalike-warning.png" alt="Send screen warning that the pasted address resembles a verified payee" /><figcaption>Lookalike warning before sending</figcaption></figure>
           <figure><img loading="lazy" src="media/02-history-poisoned.png" alt="Transaction history containing a poisoned address entry" /><figcaption>Poisoned transaction history</figcaption></figure>
