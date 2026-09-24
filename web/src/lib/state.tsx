@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useAccount, useWriteContract } from "wagmi";
-import { type Address, type Abi } from "viem";
-import { DEMO_ACCOUNTS, demoWalletClient, type DemoAccount } from "./demo";
+import { BaseError, ContractFunctionRevertedError, type Address, type Abi } from "viem";
+import { DEMO_ACCOUNTS, demoWalletClient, impersonatedWrite, type DemoAccount } from "./demo";
 import { anvilChain, deploymentFor, demoParam, type Deployment } from "./chains";
 
 export type Toast = { id: number; kind: "info" | "success" | "error"; text: string; hash?: string };
@@ -32,6 +32,18 @@ type AppState = {
 
 const Ctx = createContext<AppState | null>(null);
 
+function failureText(e: unknown): string {
+  if (e instanceof BaseError) {
+    const revert = e.walk((x) => x instanceof ContractFunctionRevertedError);
+    if (revert instanceof ContractFunctionRevertedError) {
+      const name = revert.data?.errorName ?? revert.reason;
+      return name ? `reverted (${name})` : `reverted (${revert.signature ?? "unknown error"})`;
+    }
+    return e.shortMessage;
+  }
+  return e instanceof Error ? e.message.split("\n")[0] : "transaction failed";
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const account = useAccount();
   const { writeContractAsync } = useWriteContract();
@@ -57,6 +69,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async (args: WriteArgs): Promise<`0x${string}`> => {
       if (!deployment) throw new Error("SafeSend is not deployed on this chain");
       if (demoMode) {
+        if (!demoAccount.privateKey) {
+          return impersonatedWrite({
+            address: demoAccount.address,
+            contract: args.to,
+            abi: args.abi,
+            functionName: args.functionName,
+            args: args.args,
+            value: args.value,
+          });
+        }
         const client = demoWalletClient(demoAccount);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (client as any).writeContract({
@@ -87,11 +109,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         toast({ kind: "success", text: `${label}: confirmed`, hash });
         return true;
       } catch (e) {
-        const msg =
-          (e as { shortMessage?: string; message?: string }).shortMessage ??
-          (e as Error).message ??
-          "transaction failed";
-        toast({ kind: "error", text: `${label}: ${msg.split("\n")[0]}` });
+        toast({ kind: "error", text: `${label}: ${failureText(e)}` });
         return false;
       }
     },

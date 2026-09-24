@@ -18,7 +18,11 @@ export function AddressView({
   return (
     <span className={`font-mono ${className}`} title={a}>
       <span className="font-bold text-zinc-50">{head}</span>
-      <span className="text-zinc-600">{full ? a.slice(6, -4) : "…"}</span>
+      {full ? (
+        <span className="text-amber-300">{a.slice(6, -4)}</span>
+      ) : (
+        <span className="text-zinc-600">…</span>
+      )}
       <span className="font-bold text-zinc-50">{tail}</span>
     </span>
   );

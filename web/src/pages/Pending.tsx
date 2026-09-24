@@ -157,11 +157,18 @@ function Card({ t, chainTime }: { t: TransferRow; chainTime: bigint }) {
           )}
         </div>
       )}
-      {pending && flagged && !approved && (
+      {pending && flagged && !approved && iAmSender && (
         <p className="mt-2 text-xs text-amber-500">
           Check the full recipient address above before approving this escrow. Approval lets that
           address claim after the 24-hour lock. Once it claims, it becomes verified for future
           instant sends. You can still cancel while this escrow is pending.
+        </p>
+      )}
+      {pending && flagged && !approved && !iAmSender && (
+        <p className="mt-2 text-xs text-amber-500">
+          Flagged as a lookalike of one of the sender&apos;s verified payees. You cannot claim until
+          the sender approves this escrow on-chain and the 24-hour lock ends; the sender can cancel
+          and take a refund at any time before you claim.
         </p>
       )}
       {pending && flagged && approved && iAmSender && (

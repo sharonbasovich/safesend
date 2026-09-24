@@ -12,9 +12,15 @@ From the repo root (Makefile does everything):
 - `make seed` — mints mUSDT, seeds a verified payee + escrows
 - `make web` — vite dev server at `http://localhost:5173/?demo=1`
 
+For a fresh quarantine demo, restart the local Anvil process before deploying
+and seeding; a previously claimed lookalike is already verified and will route
+instantly. Restarting resets all local-only chain state. The seed leaves the
+victim with 49,900 mUSDT after Terry claims 100 mUSDT.
+
 ## Demo wallet mode
 Append `?demo=1`. The header `<select>` switches the acting identity between
-Victim / Terry / Friend / Attacker (Anvil dev keys 0–3, see `web/src/lib/demo.ts`).
+Victim / Terry / Friend / Attacker (Anvil dev keys 0–3, see `web/src/lib/demo.ts`)
+and Lookalike recipient (impersonated).
 `me` = the selected demo account — no MetaMask needed. A card's buttons depend on
 the selected account: `Cancel & refund` / `Approve escrow #…` are
 sender-only; `Claim` is recipient-only.
@@ -24,7 +30,13 @@ sender-only; `Claim` is recipient-only.
 on the default PATH.
 
 ## Acting as a lookalike / keyless address
-Lookalike addresses have no private key. To send from one:
+Use the fifth picker entry, `Lookalike recipient (impersonated)`, for browser
+claim tests against the deterministic `DEMO_LOOKALIKE`. It uses the same
+Pending UI as other accounts, with writes routed through Anvil impersonation.
+Generating a different lookalike in the Attacker console does not change this
+fixed picker identity.
+
+Lookalike addresses have no private key. For supplementary CLI checks:
 `cast rpc anvil_impersonateAccount <addr>` + `cast rpc anvil_setBalance <addr> 0xde0b6b3a7640000`,
 then `cast send --unlocked --from <addr> ...`, then `anvil_stopImpersonatingAccount`.
 Important: without impersonation, `cast send --unlocked` still surfaces
@@ -37,6 +49,20 @@ The seed script can advance the chain clock well ahead of wall time. Pending
 uses the latest chain block timestamp as a lower bound for its unlock display
 and button state. The contract remains authoritative for claim eligibility:
 check `block.timestamp` against `unlockAt` if the display looks stale.
+Allow one polling interval (about 4 seconds) after mining or a transaction;
+the flow should not require a manual reload. The unapproved recipient's Claim
+must remain disabled even when the card says `unlocked`.
+
+## Evidence and negative checks
+- Record pre-send, pre-refund and post-refund balances; dust adds 0.000042
+  mUSDT, so compare exact decimals rather than rounded amounts.
+- Verify both the on-chain `verified(sender, recipient)` value and the next
+  Send badge after a claim; an instant send must leave `nextId()` unchanged.
+- Disabled Claim proves the UI gate, not the displayed contract-revert path.
+  Use an impersonated CLI call for `NotApproved`/`NotSender` checks and label
+  that evidence contract-only rather than claiming the UI showed the errors.
+- Full addresses may only be available by hovering truncated payee entries.
+  Capture the tooltip when distinguishing two entries with one fingerprint.
 
 ## Escrow/claim semantics worth knowing
 - `claim()` revert order: NotRecipient → NotPending → `Locked` (before

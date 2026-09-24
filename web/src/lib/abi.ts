@@ -17,6 +17,21 @@ export const safeSendAbi = parseAbi([
   "function transfers(uint256) view returns (address token, address from, address to, uint128 amount, uint64 unlockAt, uint8 status, uint8 reason)",
   "function lookalikeApproved(uint256) view returns (bool)",
   "function nextId() view returns (uint256)",
+  "error NotRecipient()",
+  "error NotSender()",
+  "error NotApproved()",
+  "error NotLookalike()",
+  "error Locked()",
+  "error NotPending()",
+  "error TooEarly()",
+  "error ZeroAmount()",
+  "error BadValue()",
+  "error CooldownOutOfRange()",
+  "error SelfSend()",
+  "error EthTransferFailed()",
+  "error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed)",
+  "error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed)",
+  "error SafeERC20FailedOperation(address token)",
 ]);
 
 export const erc20Abi = parseAbi([

@@ -10,8 +10,13 @@ export type DemoAccount = {
   id: string;
   label: string;
   address: Address;
-  privateKey: `0x${string}`;
+  /** absent for keyless accounts driven via Anvil impersonation */
+  privateKey?: `0x${string}`;
 };
+
+// Deterministic lookalike of Terry: same 0x7099…79c8 fingerprint, different
+// middle. Controlled by nobody — Anvil impersonation fills in for the key.
+export const DEMO_LOOKALIKE: Address = "0x7099deadbeefcafe1234567890abcdef012379c8";
 
 export const DEMO_ACCOUNTS: DemoAccount[] = [
   {
@@ -38,13 +43,15 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
     privateKey: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
   },
+  {
+    id: "lookalike",
+    label: "Lookalike recipient (impersonated)",
+    address: DEMO_LOOKALIKE,
+  },
 ];
 
-// Deterministic lookalike of Terry: same 0x7099…79c8 fingerprint, different
-// middle. Controlled by nobody — Anvil impersonation fills in for the key.
-export const DEMO_LOOKALIKE: Address = "0x7099deadbeefcafe1234567890abcdef012379c8";
-
 export function demoWalletClient(acc: DemoAccount): WalletClient {
+  if (!acc.privateKey) throw new Error(`${acc.label} is keyless; use Anvil impersonation`);
   return createWalletClient({
     account: privateKeyToAccount(acc.privateKey),
     chain: anvilChain,
@@ -52,7 +59,7 @@ export function demoWalletClient(acc: DemoAccount): WalletClient {
   });
 }
 
-// Sends a tx from an impersonated Anvil account (attacker-console use only).
+// Sends a tx from an impersonated Anvil account (local demo only).
 export async function impersonatedWrite(args: {
   address: Address;
   abi: readonly unknown[];
@@ -60,6 +67,7 @@ export async function impersonatedWrite(args: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   args?: readonly any[];
   contract: Address;
+  value?: bigint;
 }): Promise<`0x${string}`> {
   const { createTestClient } = await import("viem");
   const testClient = createTestClient({ chain: anvilChain, transport: http(ANVIL_RPC), mode: "anvil" });
@@ -77,6 +85,7 @@ export async function impersonatedWrite(args: {
       abi: args.abi,
       functionName: args.functionName,
       args: args.args ?? [],
+      value: args.value,
     });
     return hash;
   } finally {

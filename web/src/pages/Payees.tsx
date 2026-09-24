@@ -71,7 +71,7 @@ export function PayeesPage() {
             className="flex items-center justify-between rounded-lg border border-emerald-900/60 bg-zinc-900/60 px-4 py-3"
           >
             <div>
-              <AddressView address={p} />
+              <AddressView address={p} full className="break-all text-xs" />
               <div className="mt-0.5 font-mono text-xs text-zinc-500">
                 fp 0x{fingerprint(p).toString(16).padStart(8, "0")}
               </div>
