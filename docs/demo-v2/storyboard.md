@@ -30,8 +30,8 @@ and a top-right badge `local Anvil · chain 31337 · mock mUSDT · synthetic add
 
 ## Not shown (time budget) — covered by the old public demo and by QA
 - Sender **Cancel & refund** while pending (the button is visible in scenes 3 and 5; the exact
-  1,000 mUSDT refund is verified in `qa/anvil-negative-tests.log` §6–7 and in the browser QA).
-- Cancel *after* approval but before claim (`qa/anvil-negative-tests.log` §7).
+  1,000 mUSDT refund is verified in `qa/anvil-negative-tests.result.txt` §6–7 and in the browser QA).
+- Cancel *after* approval but before claim (`qa/anvil-negative-tests.result.txt` §7).
 
 ## Recording
 ```bash
