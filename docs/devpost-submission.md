@@ -32,7 +32,9 @@ characters the wallet displays:
   `LookalikeFlagged` event. The sender can cancel for a full refund at any
   time; the flagged recipient cannot claim at all without the sender's
   explicit on-chain approval (`approveLookalike`), and the sender can still
-  cancel even after approving.
+  cancel even after approving. Approving is a deliberate trust decision:
+  an approved claim pays out *and verifies* that address for future instant
+  sends — which is exactly why it can never happen automatically.
 
 The defense is at the same layer the attack exploits: the contract compares
 exactly the characters wallets display, and it enforces on-chain so it works
@@ -65,7 +67,7 @@ Sepolia:
 - **Contracts:** Solidity 0.8.28, Foundry (forge/anvil/cast), OpenZeppelin
   Contracts (SafeERC20, ReentrancyGuard)
 - **Testing:** Forge unit/negative/fuzz (512 runs) + invariant suite
-  (128 runs × depth 32); 56 tests, 100% line coverage on SafeSend.sol
+  (128 runs × depth 32); 57 tests, 100% line coverage on SafeSend.sol
 - **Web:** Vite, React 18, TypeScript, wagmi v2 + viem v2, Tailwind CSS,
   TanStack Query
 - **Demo tooling:** Anvil (local chain), viem scripts for deploy + seed,

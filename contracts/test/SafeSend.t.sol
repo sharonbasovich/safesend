@@ -329,6 +329,22 @@ contract SafeSendTest is Test {
         assertFalse(router.lookalikeApproved(id));
     }
 
+    function test_unapprovedClaim_neverVerifiesLookalike() public {
+        // reverted claims must not verify the lookalike — a verified lookalike
+        // would receive future sends instantly, defeating the quarantine
+        (uint256 id, address lookalike) = _lookalikeEscrow();
+        assertFalse(router.verified(alice, lookalike));
+        vm.warp(block.timestamp + 24 hours + 365 days);
+        vm.prank(lookalike);
+        vm.expectRevert(SafeSend.NotApproved.selector);
+        router.claim(id);
+        assertFalse(router.verified(alice, lookalike));
+        // and the escrow is still pending so the sender can still cancel
+        vm.prank(alice);
+        router.cancel(id);
+        assertFalse(router.verified(alice, lookalike));
+    }
+
     function test_approveLookalike_byRecipient_revertsSelfApprove() public {
         (uint256 id, address lookalike) = _lookalikeEscrow();
         vm.prank(lookalike);

@@ -159,7 +159,15 @@ function Card({ t, flagged }: { t: TransferRow; flagged: boolean }) {
       {pending && flagged && !approved && (
         <p className="mt-2 text-xs text-amber-500">
           Flagged lookalike: the recipient cannot claim until the sender approves on-chain — no
-          auto-approval, and the sender can still cancel even after approving.
+          auto-approval, and the sender can still cancel even after approving. Approving marks this
+          address as your intended payee: if it then claims, it becomes a verified payee and future
+          sends to it are instant — approve only if you have confirmed it out-of-band.
+        </p>
+      )}
+      {pending && flagged && approved && (
+        <p className="mt-2 text-xs text-zinc-500">
+          Approved by sender. If the recipient claims, this address becomes a verified payee for
+          future instant sends — you can still cancel and refund before it does.
         </p>
       )}
       {pending && iAmRecipient && !unlocked && (

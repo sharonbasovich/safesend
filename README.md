@@ -41,11 +41,14 @@ sender's verified payees carry each fingerprint, so `send()` can distinguish:
 
 - `cancel(id)` — sender only, any time while `Pending`. Full refund.
 - `claim(id)` — recipient only, after `unlockAt`. Pays out **and verifies** the
-  recipient (`PayeeVerified`). Lookalike escrows additionally require the
-  sender's `approveLookalike(id)` first — time alone never unlocks them.
+  recipient (`PayeeVerified`) — every successful claim verifies, including an
+  approved lookalike claim: that address then receives future sends instantly.
+  Lookalike escrows additionally require the sender's `approveLookalike(id)`
+  first — time alone never unlocks them.
 - `approveLookalike(id)` — sender only, pending `LookalikeOfVerified` escrows
-  only. Emits `LookalikeApproved`. Does not prevent the sender cancelling
-  afterward.
+  only. Emits `LookalikeApproved`. Approving says "I confirm this is the real
+  payee": if the recipient then claims, the address becomes a verified payee.
+  Does not prevent the sender cancelling afterward.
 - `reclaim(id)` — sender only, after `unlockAt + 30 days`. Dead-letter
   recovery for recipients that never claim.
 - `addPayee` / `removePayee` — the sender's own verified book, on-chain.
@@ -140,7 +143,7 @@ the same UI uses wagmi instead.
 
 ```bash
 cd contracts
-forge test -vvv        # 56 tests — unit, negative, event, fuzz, invariant
+forge test -vvv        # 57 tests — unit, negative, event, fuzz, invariant
 forge fmt --check
 forge snapshot
 forge coverage         # 100% lines on SafeSend.sol
@@ -187,7 +190,9 @@ The key lives only in your local `.env` (gitignored). `Deploy.s.sol` writes
 - **Quarantine ≠ trap.** The sender keeps full control: they can always
   cancel (even after approving), approve the flagged recipient explicitly,
   or walk away (`reclaim` after 30 days). A flagged recipient cannot
-  self-release — no approval is ever automatic.
+  self-release — no approval is ever automatic. **Approving is a trust
+  decision:** if the approved recipient claims, that address is verified and
+  future sends to it skip escrow — approve only after an out-of-band check.
 - **Reorgs / UI trust.** Lookalike badges depend on on-chain event reads;
   use your own RPC in anything real.
 - **Unaudited.** Reviewed with unit/fuzz/invariant tests only. Do not deploy

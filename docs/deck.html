@@ -68,7 +68,7 @@
   <h2><span class="num">03</span>The contract — a router, not a vault</h2>
   <div class="grid2">
     <div class="card"><b>send(to, token, amount)</b><br>Verified → instant. Lookalike → 24h lock + flag. Unknown → escrow for sender's cooldown (60s–7d).</div>
-    <div class="card"><b>cancel(id)</b> sender only, any time → full refund<br><b>claim(id)</b> recipient only, after unlock → pays out <b>and verifies</b> — flagged escrows also need sender's <b>approveLookalike(id)</b></div>
+    <div class="card"><b>cancel(id)</b> sender only, any time → full refund<br><b>claim(id)</b> recipient only, after unlock → pays out <b>and verifies</b> — flagged escrows also need sender's <b>approveLookalike(id)</b>, so an approved claim verifies too</div>
     <div class="card"><b>reclaim(id)</b> after unlock + 30d — dead-letter recovery</div>
     <div class="card"><b>addPayee / removePayee / setCooldown</b> — the sender's own book. No owner. No admin. No fees.</div>
   </div>
@@ -91,7 +91,7 @@
 <div class="slide">
   <h2><span class="num">05</span>Engineering rigor</h2>
   <ul>
-    <li><b>56 Foundry tests</b>: unit, negative (NotRecipient / NotSender / Locked / TooEarly …), event assertions.</li>
+    <li><b>57 Foundry tests</b>: unit, negative (NotRecipient / NotSender / Locked / TooEarly …), event assertions.</li>
     <li><b>Fuzz</b> (512 runs): random amounts, recipients, timings across every transition.</li>
     <li><b>Invariants</b> (128 × depth 32): router solvency for ERC-20 + ETH; nextId monotonic; verified recipients can never sit in escrow.</li>
     <li><b>100% line coverage</b> on SafeSend.sol · <span class="mono">forge fmt</span> clean · gas snapshot.</li>
