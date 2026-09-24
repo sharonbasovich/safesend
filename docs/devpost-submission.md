@@ -55,11 +55,11 @@ Sepolia:
   risk badge), Pending & quarantine, Payees, History (poison detection), and
   an Attacker console that runs the whole attack so judges can watch it
   happen.
-- The guided demo shows: attacker poisons the victim's history → victim
-  sends to the lookalike → quarantine + flag (claimable only with the
-  sender's approval — the lookalike can never self-release) → victim cancels
-  and is refunded → victim sends to the real verified payee instantly → a
-  new contact escrows, claims, and becomes verified.
+- The recorded demo shows: attacker poisons the victim's history → victim
+  sends to the lookalike → quarantine + flag → recipient remains blocked after
+  the 24-hour lock without sender approval → sender approves that escrow →
+  recipient claims → the exact address becomes verified for future instant
+  sends. Contract QA separately demonstrates sender cancellation and refund.
 
 ## Tech stack
 
@@ -80,21 +80,21 @@ https://github.com/sharonbasovich/safesend
 
 ## Demo
 
-- Video: https://github.com/sharonbasovich/safesend/blob/main/docs/safesend-demo-anvil-e2e.mp4
-  (real local-Anvil end-to-end walkthrough; upload to a Devpost-supported video
-  host if required)
+- Video: https://github.com/sharonbasovich/safesend/blob/main/docs/demo-v2/safesend-demo-v2.mp4
+  (two-minute local-Anvil walkthrough of the approval gate and future-trust
+  consequence; upload to a Devpost-supported video host if required)
 - Web showcase: https://sharonbasovich.github.io/safesend/ — video, deck, and
   screenshots. It is not a live public-chain demo; the interactive web UI
   requires a local Anvil node as described below.
 - Local demo: `make anvil && make deploy-local && make seed && make web`,
   then open `http://localhost:5173/?demo=1`
-- Screenshots: `docs/screenshots/` (attack → quarantine → refund → verified
-  payees)
+- Screenshots: `docs/demo-v2/screenshots/` (attack → quarantine → approval →
+  verified payees)
 
 ## Presentation
 
 - Slide deck: `docs/deck.pdf` (8 slides)
-- Video script: `docs/video-script.md`
+- Video storyboard: `docs/demo-v2/storyboard.md`
 - README: setup, guided demo steps, security model, limitations, prior art
 
 ## Disclosures

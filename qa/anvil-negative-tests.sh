@@ -137,3 +137,4 @@ E1=$(cast balance --rpc-url $RPC $VICTIM)
 python3 -c "import sys; d=$E0-$E1; sys.exit(0 if d < 10**16 else 1)" && ok "ETH refunded (net cost = gas only)" || bad "ETH refund"
 
 echo; echo "RESULT: $PASS passed, $FAIL failed"
+if [ "$FAIL" -ne 0 ]; then exit 1; fi

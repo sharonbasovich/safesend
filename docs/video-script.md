@@ -1,4 +1,8 @@
-# SafeSend demo video script — 2:45 target
+# SafeSend demo video script — original 2:45 target
+
+This script covers the earlier cancellation demo. For the current two-minute
+recording, including sender approval and the recipient claim gate, use the
+[demo v2 storyboard](demo-v2/storyboard.md).
 
 Recorded against local Anvil (`make anvil && make deploy-local && make seed && make web`).
 UI at `http://localhost:5173/?demo=1`. B-roll notes in brackets.

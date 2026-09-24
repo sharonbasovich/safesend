@@ -2,7 +2,7 @@
 
 **3rd Web Hack entry. Unaudited testnet prototype — do not use with real funds.**
 
-[Public demo showcase](https://sharonbasovich.github.io/safesend/) · [Local-Anvil demo video](docs/safesend-demo-anvil-e2e.mp4) · [Eight-slide deck](docs/deck.pdf) · [Demo screenshots](docs/screenshots/)
+[Public demo showcase](https://sharonbasovich.github.io/safesend/) · [Two-minute local-Anvil demo](docs/demo-v2/safesend-demo-v2.mp4) · [Eight-slide deck](docs/deck.pdf) · [Demo screenshots](docs/demo-v2/screenshots/)
 
 SafeSend is a payment router that gives senders an on-chain check before a
 flagged lookalike can receive escrowed funds. Instead of paying an address
@@ -113,9 +113,10 @@ make web          # → http://localhost:5173/?demo=1
 ```
 
 Open `http://localhost:5173/?demo=1`. The demo mode lets you drive four Anvil
-accounts (Victim / Terry / New friend / Attacker) from the account picker —
-no MetaMask needed locally. With a browser wallet connected on Base Sepolia,
-the same UI uses wagmi instead.
+accounts (Victim / Terry / New friend / Attacker) and a keyless lookalike
+recipient (impersonated on Anvil) from the account picker — no MetaMask needed
+locally. With a browser wallet connected on Base Sepolia, the same UI uses
+wagmi instead.
 
 ### The guided demo (~3 min)
 
@@ -181,6 +182,10 @@ The key lives only in your local `.env` (gitignored). `Deploy.s.sol` writes
   different set of visible characters, such as the first six but not the last
   four, can evade this check. The payee book must also contain the real payee
   before a collision can be detected.
+- **Classification is fixed when an escrow is created.** If an unknown
+  recipient later becomes a lookalike because the sender verifies a colliding
+  payee, that existing escrow still follows the unknown-payee claim rules.
+  Review and cancel pending escrows after changing the payee book.
 - **Verification is only as good as its source.** `addPayee` trusts the
   sender's out-of-band check. If a user verifies a lookalike, SafeSend can't
   help. Claim-to-verify is safer: a recipient can only claim funds actually
