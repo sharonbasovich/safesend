@@ -66,14 +66,14 @@
             <a class="button" href="https://github.com/sharonbasovich/safesend">View source and setup</a>
             <a class="button" href="media/deck.pdf">Open slide deck</a>
           </div>
-          <p class="notice"><strong>Local test environment:</strong> The video shows real contract interactions on Anvil with mock assets. It records the cancellation path; the current contract also requires sender approval before a flagged recipient can claim. This page is a showcase; transactions require running Anvil locally. SafeSend is unaudited and must not be used with real funds.</p>
+          <p class="notice"><strong>Local test environment:</strong> The video shows real contract interactions on Anvil with mock assets, including the sender approval gate and a claim after the 24-hour lock. This page is a showcase; transactions require running Anvil locally. SafeSend is unaudited and must not be used with real funds.</p>
         </div>
       </div>
       <section id="demo" class="shell">
         <h2>End-to-end walkthrough</h2>
-        <p class="muted">Watch a poisoned history entry trigger a lookalike warning, quarantine, and full refund, followed by verified and unknown-payee flows.</p>
-        <video controls preload="metadata" poster="media/01-send-lookalike-warning.png"><source src="media/demo.mp4" type="video/mp4" />Your browser does not support embedded video. <a href="media/demo.mp4">Download the demo video.</a></video>
-        <p class="muted">Recorded on a fresh local Anvil chain with public test accounts and mock USDT. The footage predates the approval button; the cancellation and refund flow remains valid. No mainnet funds or paid keys were used.</p>
+        <p class="muted">In this two-minute captioned demo, a poisoned history entry triggers a lookalike warning and on-chain quarantine. The recipient cannot claim after the lock without sender approval. An approved claim then verifies that exact address for future instant sends.</p>
+        <video controls preload="metadata" poster="media/demo-v2/screenshots/03-send-lookalike-warning.png"><source src="media/demo-v2/safesend-demo-v2.mp4" type="video/mp4" />Your browser does not support embedded video. <a href="media/demo-v2/safesend-demo-v2.mp4">Download the demo video.</a></video>
+        <p class="muted">Recorded on a fresh local Anvil chain with synthetic addresses and mock mUSDT. The <a href="media/demo.mp4">earlier cancellation walkthrough</a> shows a sender recovering escrowed funds; the current contract also permits cancellation after approval while the escrow is pending. No mainnet funds or paid keys were used.</p>
       </section>
       <section id="flow" class="shell">
         <h2>One router, three send paths</h2>
@@ -85,14 +85,16 @@
       </section>
       <section id="screenshots" class="shell">
         <h2>See the prototype in context</h2>
-        <p class="muted">Screenshots from the recorded local Anvil cancellation demo. The current source adds explicit sender approval for flagged claims. The attack tool is educational and uses test assets only.</p>
+        <p class="muted">Screenshots from the current local Anvil walkthrough. The attack tool is educational and uses test assets only.</p>
         <div class="gallery">
-          <figure><img loading="lazy" src="media/01-send-lookalike-warning.png" alt="Send screen warning that the pasted address resembles a verified payee" /><figcaption>Lookalike warning before sending</figcaption></figure>
-          <figure><img loading="lazy" src="media/02-history-poisoned.png" alt="Transaction history containing a poisoned address entry" /><figcaption>Poisoned transaction history</figcaption></figure>
-          <figure><img loading="lazy" src="media/03-pending-quarantine.png" alt="Pending payment quarantined with a countdown" /><figcaption>24-hour quarantine</figcaption></figure>
-          <figure><img loading="lazy" src="media/04-refund-confirmed.png" alt="Confirmation that the sender cancelled and recovered test funds" /><figcaption>Sender cancellation and refund</figcaption></figure>
-          <figure><img loading="lazy" src="media/05-verified-payees.png" alt="Verified payee list showing trusted recipients" /><figcaption>Verified payee book</figcaption></figure>
-          <figure><img loading="lazy" src="media/06-attacker-console.png" alt="Local test attacker console used to reproduce the poisoning attempt" /><figcaption>Educational attacker console</figcaption></figure>
+          <figure><img loading="lazy" src="media/demo-v2/screenshots/01-attacker-console.png" alt="Local test attacker console preparing a lookalike address" /><figcaption>Educational attacker console</figcaption></figure>
+          <figure><img loading="lazy" src="media/demo-v2/screenshots/02-history-poisoned.png" alt="Transaction history containing a poisoned address entry" /><figcaption>Poisoned transaction history</figcaption></figure>
+          <figure><img loading="lazy" src="media/demo-v2/screenshots/03-send-lookalike-warning.png" alt="Send screen warning that the pasted address resembles a verified payee" /><figcaption>Lookalike warning before sending</figcaption></figure>
+          <figure><img loading="lazy" src="media/demo-v2/screenshots/04-pending-sender-full-address.png" alt="Quarantined escrow showing the full recipient address and sender approval button" /><figcaption>Sender reviews the full address</figcaption></figure>
+          <figure><img loading="lazy" src="media/demo-v2/screenshots/06-recipient-unlocked-blocked.png" alt="Recipient cannot claim the unlocked escrow without sender approval" /><figcaption>Unlocked but still blocked</figcaption></figure>
+          <figure><img loading="lazy" src="media/demo-v2/screenshots/07-sender-approved.png" alt="Sender approval recorded for the flagged escrow" /><figcaption>Explicit sender approval</figcaption></figure>
+          <figure><img loading="lazy" src="media/demo-v2/screenshots/10-payees-verified.png" alt="Verified payee list showing full addresses for the real payee and lookalike" /><figcaption>The claimed address becomes verified</figcaption></figure>
+          <figure><img loading="lazy" src="media/demo-v2/screenshots/11-send-now-verified-instant.png" alt="Send screen showing the newly verified recipient will be paid instantly" /><figcaption>Future sends to it are instant</figcaption></figure>
         </div>
       </section>
       <section class="shell">
