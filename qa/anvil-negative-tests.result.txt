@@ -1,0 +1,66 @@
+router=0x5FbDB2315678afecb367f032d93F642f64180aa3 token=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+
+== 0. preconditions
+  PASS: Terry is verified for victim
+  PASS: isLookalike(victim, 0x7099deadbeefcafe1234567890abcdef012379c8) == true
+
+== 1. flagged send → LookalikeFlagged, 24h lock
+  PASS: LookalikeFlagged emitted for escrow #2
+    0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+    0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    0x7099DEaDBEeFcAfE1234567890aBcdef012379C8
+    1000000000
+    1790375269
+    0
+    1
+  PASS: unlockAt ≈ now+24h (86400s)
+  PASS: reason == LookalikeOfVerified
+  PASS: 1,000 mUSDT pulled from victim into escrow
+
+== 2. claim before unlock → Locked (recipient, impersonated)
+  PASS: reverted with Locked
+
+== 3. time-travel past 24h; unapproved claim → NotApproved
+  PASS: chain time past unlockAt
+  PASS: reverted with NotApproved
+  PASS: lookalike NOT verified after blocked claim
+
+== 4. approveLookalike by non-sender → NotSender
+  PASS: reverted with NotSender
+  PASS: reverted with NotSender
+  PASS: lookalikeApproved still false
+
+== 5. non-recipient claim → NotRecipient; third-party cancel → NotSender
+  PASS: reverted with NotRecipient
+  PASS: reverted with NotSender
+
+== 6. sender cancel after unlock (unapproved) → full refund
+  PASS: cancel tx ok
+  PASS: victim refunded 1,000 mUSDT
+  PASS: status == Cancelled
+  PASS: reverted with NotPending
+
+== 7. second flagged escrow: approve → cancel still works (refund)
+    approve status 0x1 logs 1
+  PASS: escrow #3 approved
+  -- approved but still locked: claim → Locked
+  PASS: reverted with Locked
+  PASS: cancel after approval refunds sender
+
+== 8. third flagged escrow: approve + 24h → claim succeeds → lookalike becomes VERIFIED (future sends instant)
+  PASS: PayeeVerified emitted on claim
+  PASS: lookalike received 1,000 mUSDT
+  PASS: verified(victim, lookalike) == true  ← future-trust consequence
+  PASS: subsequent send to lookalike is INSTANT (no escrow)
+  fpCount(victim, fp(Terry)=1889106376) = 2  (Terry + lookalike now both verified with the same fingerprint)
+
+== 9. edge: UnknownPayee escrow created BEFORE a colliding payee is added → claim needs no approval
+  PASS: escrow #5 reason=UnknownPayee (attacker not yet a lookalike)
+  PASS: attacker is now a lookalike of a verified payee
+  NOTE: claim by now-lookalike attacker succeeded WITHOUT approval (reason is fixed at send time) — see report
+
+== 10. ETH path sanity: flagged ETH escrow cancel refunds
+  PASS: ETH send to fresh lookalike flagged
+  PASS: ETH refunded (net cost = gas only)
+
+RESULT: 30 passed, 0 failed

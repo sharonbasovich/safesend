@@ -50,7 +50,7 @@ $ npm run build                → OK (pre-existing chunk-size warning only)
 ## 2. Contract-level negative tests on live local Anvil
 
 Script: `qa/anvil-negative-tests.sh` (cast-driven, impersonates the keyless lookalike with
-`anvil_impersonateAccount`). Log: `qa/anvil-negative-tests.log`.
+`anvil_impersonateAccount`). Log: `qa/anvil-negative-tests.result.txt`.
 
 ```
 $ export PATH=$HOME/.foundry/bin:$PATH
@@ -124,7 +124,7 @@ Run by the testing agent on a fresh chain (`anvil` → `make deploy-local` → `
 - **E1 `reason` is fixed at send time.** An escrow created while the recipient was merely an
   *unknown payee* keeps `reason = UnknownPayee` even if the sender later verifies a colliding
   payee (making the recipient a lookalike). That older escrow can then be claimed after its
-  cooldown without approval (`qa/anvil-negative-tests.log` §9). This is consistent with the
+  cooldown without approval (`qa/anvil-negative-tests.result.txt` §9). This is consistent with the
   documented model (classification happens at `send()`), the sender still sees it under Pending and
   can cancel it, and re-classifying escrows retroactively would open its own griefing vectors — so
   no change recommended, but worth a sentence in the README's limitations.
